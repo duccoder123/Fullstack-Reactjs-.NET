@@ -5,8 +5,11 @@ using BootcampAPI.Utilities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
-using System.Text.RegularExpressions;
+using System.Text;
+using System.Security.Claims;
 
 namespace BootcampAPI.Controllers
 {
@@ -27,6 +30,57 @@ namespace BootcampAPI.Controllers
             _response = new ApiResponse();
             _userManager = userManager;
             _roleManager = roleManager;
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Login([FromBody] LoginRequestDto loginRequestDto)
+        {
+            ApplicationUser userFrDb = _db.ApplicationUsers
+                .FirstOrDefault(u => u.UserName.ToLower() == loginRequestDto.UserName.ToLower());
+
+            bool isValid = await _userManager.CheckPasswordAsync(userFrDb,loginRequestDto.Password);
+            if(!isValid)
+            {
+                _response.Result = new LoginResponseDto();
+                _response.StatusCode = HttpStatusCode.BadRequest;
+                _response.IsSuccess = false;
+                _response.ErrorMessages.Add("Username or password is incorrect");
+                return BadRequest(_response);
+            }
+            // generate JWT Token in here
+            JwtSecurityTokenHandler tokenHandler = new();
+            byte[] key = Encoding.ASCII.GetBytes(_secretKey);
+            var role = await _userManager.GetRolesAsync(userFrDb);
+            SecurityTokenDescriptor tokenDescriptor = new()
+            {
+                Subject = new ClaimsIdentity(new Claim[]
+                {
+                    new Claim("fullName", userFrDb.UserName),
+                    new Claim("id", userFrDb.Id.ToString()),
+                    new Claim(ClaimTypes.Email, userFrDb.UserName.ToString()),
+                    new Claim(ClaimTypes.Role, role.FirstOrDefault())
+                }),
+                Expires = DateTime.UtcNow.AddDays(7),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
+            };
+            SecurityToken securityToken = tokenHandler.CreateToken(tokenDescriptor);
+
+            LoginResponseDto loginResposne = new()
+            {
+                Email = userFrDb.Email,
+                Token = tokenHandler.WriteToken(securityToken)
+            };
+            if(loginResposne.Email == null && string.IsNullOrEmpty(loginResposne.Token))
+            {
+                _response.StatusCode = HttpStatusCode.BadRequest;
+                _response.IsSuccess = false;
+                _response.ErrorMessages.Add("Username or password is incorrect");
+                return BadRequest(_response);   
+            }
+            _response.StatusCode =HttpStatusCode.OK;
+            _response.IsSuccess = true;
+            _response.Result = loginResposne;
+            return Ok(_response);
         }
         [HttpPost]
         public async Task<IActionResult> Register([FromBody] RegisterRequestDto registerRequestDto)
