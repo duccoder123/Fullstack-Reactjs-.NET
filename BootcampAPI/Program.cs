@@ -72,7 +72,7 @@ builder.Services.AddSwaggerGen(options =>
             },
             new List<string>()
         }
-    })
+    });
 });
 
 var app = builder.Build();

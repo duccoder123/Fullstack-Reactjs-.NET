@@ -82,7 +82,7 @@ namespace BootcampAPI.Controllers
             _response.Result = loginResposne;
             return Ok(_response);
         }
-        [HttpPost]
+        [HttpPost("login")]
         public async Task<IActionResult> Register([FromBody] RegisterRequestDto registerRequestDto)
         {
             ApplicationUser userFrDb = _db.ApplicationUsers.FirstOrDefault(u => u.UserName.ToLower() == registerRequestDto.UserName.ToLower());
