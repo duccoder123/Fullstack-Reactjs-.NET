@@ -1,5 +1,7 @@
 ﻿using BootcampAPI.Data;
 using BootcampAPI.Models;
+using BootcampAPI.Models.Dto;
+using BootcampAPI.Utilities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -76,5 +78,107 @@ namespace BootcampAPI.Controllers
             }
             return _response;
         }
+        [HttpPost]
+        public async Task<ActionResult<ApiResponse>> CreateOrder([FromBody] OrderHeaderCreateDto orderHeaderDto)
+        {
+            try
+            {
+                OrderHeader order = new()
+                {
+                    ApplicationUserId = orderHeaderDto.ApplicationUserId,
+                    PickupEmail = orderHeaderDto.PickupEmail,
+                    PickupPhoneNumber = orderHeaderDto.PickupPhoneNumber,
+                    PickupName = orderHeaderDto.PickupName,
+                    OrderTotal = orderHeaderDto.OrderTotal,
+                    OrderDate = DateTime.Now,
+                    StripePaymentIntentId = orderHeaderDto.StripePaymentIntentId,
+                    TotalItems = orderHeaderDto.TotalItems,
+                    Status = String.IsNullOrEmpty(orderHeaderDto.Status) ? SD.status_pending : orderHeaderDto.Status,
+                };
+                if (ModelState.IsValid)
+                {
+                    _db.OrderHeaders.Add(order);
+                    _db.SaveChanges();
+                    foreach (var orderDetailDto in orderHeaderDto.OrderDetailsDTO)
+                    {
+                        OrderDetails orderDetails = new()
+                        {
+                            OrderHeaderId = order.OrderHeaderId,
+                            ItemName = orderDetailDto.ItemName,
+                            MenuItemId = orderDetailDto.MenuItemId,
+                            Price = orderDetailDto.Price,
+                            Quantity = orderDetailDto.Quantity
+                        };
+                        _db.OrderDetails.Add(orderDetails);
+                    }
+                    _db.SaveChanges();
+                    _response.Result = order;
+                    order.OrderDetails = null;
+                    _response.StatusCode = System.Net.HttpStatusCode.Created;
+                    return Ok(_response);
+                }
+            }
+            catch (Exception ex)
+            {
+                _response.IsSuccess = false;
+                _response.ErrorMessages =
+                    new List<string>() { ex.ToString() };
+            }
+            return _response;
+        }
+
+        [HttpPut("{id:int}")]
+        public async Task<ActionResult<ApiResponse>> UpdateOrderHeader(int id, [FromBody] OrderHeaderUpdateDto orderHeaderUpdate)
+        {
+            try
+            {
+                if (orderHeaderUpdate == null || id != orderHeaderUpdate.OrderHeaderId)
+                {
+                    _response.IsSuccess = false;
+                    _response.StatusCode = System.Net.HttpStatusCode.BadRequest;
+                    return BadRequest();
+                }
+                OrderHeader orderFrDb = _db.OrderHeaders.FirstOrDefault(u => u.OrderHeaderId == id);
+                if(orderFrDb == null)
+                {
+                    _response.IsSuccess = false;
+                    _response.StatusCode = System.Net.HttpStatusCode.BadRequest;
+                    return BadRequest();
+                }
+                if (!string.IsNullOrEmpty(orderHeaderUpdate.PickupName))
+                {
+                    orderFrDb.PickupName = orderHeaderUpdate.PickupName;
+                }
+                if (!string.IsNullOrEmpty(orderHeaderUpdate.PickupPhoneNumber))
+                {
+                    orderFrDb.PickupPhoneNumber = orderHeaderUpdate.PickupPhoneNumber;
+                }
+                if (!string.IsNullOrEmpty(orderHeaderUpdate.PickupEmail))
+                {
+                    orderFrDb.PickupEmail = orderHeaderUpdate.PickupEmail;
+                }
+                if (!string.IsNullOrEmpty(orderHeaderUpdate.Status))
+                {
+                    orderFrDb.Status = orderHeaderUpdate.Status;
+                }
+                if (!string.IsNullOrEmpty(orderHeaderUpdate.StripePaymentIntentId))
+                {
+                    orderFrDb.StripePaymentIntentId = orderHeaderUpdate.StripePaymentIntentId;
+                }
+                _db.SaveChanges();
+                _response.StatusCode = System.Net.HttpStatusCode.NoContent;
+                _response.IsSuccess = true;
+                return Ok(_response);
+            }
+            catch(Exception ex)
+            {
+                _response.IsSuccess = false;
+                _response.ErrorMessages =
+                    new List<string>() { ex.ToString() };
+            }
+            return _response;
+        }
     }
+
+
 }
