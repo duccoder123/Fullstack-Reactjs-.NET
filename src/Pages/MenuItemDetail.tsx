@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { useGetMenuItemByIdQuery } from "../apis/menuItemApi";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { useUpdateShoppingCartMutation } from "../apis/shoppingCartApi";
 // USER ID - a2283b26-1086-4ec6-b72e-7ba985f50494
 
 function MenuItemDetail() {
@@ -10,6 +11,9 @@ function MenuItemDetail() {
   const { data, isLoading } = useGetMenuItemByIdQuery(menuItemId);
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
+  const [isAddingToCart, setIsAddingToCart] = useState<boolean>(false);
+  const [updateShoppingCart] = useUpdateShoppingCartMutation();
+
   const handleQuantity = (counter: number) => {
     let newQuantity = quantity + counter;
     if (newQuantity === 0) {
