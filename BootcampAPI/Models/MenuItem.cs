@@ -15,6 +15,7 @@ namespace BootcampAPI.Models
         public double Price { get; set; }
         [Required]
         public string Image { get;set; }
+
         
     }
 }

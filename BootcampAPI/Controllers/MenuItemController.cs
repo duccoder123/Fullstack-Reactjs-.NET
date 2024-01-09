@@ -1,6 +1,7 @@
 ﻿using BootcampAPI.Data;
 using BootcampAPI.Models;
 using BootcampAPI.Models.Dto;
+using BootcampAPI.Service;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
@@ -13,17 +14,21 @@ namespace BootcampAPI.Controllers
     {
         private readonly ApplicationDbContext _db;
         private ApiResponse _response;
-        public MenuItemController(ApplicationDbContext db)
+        private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly ILocalService _localService;
+        public MenuItemController(ApplicationDbContext db, ILocalService localService, IWebHostEnvironment webHostEnvironment)
         {
             _db = db;
+            _webHostEnvironment = webHostEnvironment;
+            _localService = localService;
             _response = new ApiResponse();
         }
         [HttpGet]
         public async Task<IActionResult> GetMenuItems()
         {
-            _response.Result = _db.MenuItems;
+            _response.Result = _db.MenuItems.ToList();
             _response.StatusCode = HttpStatusCode.OK;
-            return Ok(_db.MenuItems.ToList());
+            return Ok(_response);
         }
 
         [HttpGet("{id:int}", Name = "GetMenuItem")]
@@ -47,12 +52,23 @@ namespace BootcampAPI.Controllers
             return Ok(_response);
         }
         [HttpPost]
-        public async Task<IActionResult> CreateMenuItem([FromBody] MenuItemCreateDto menuItemCreateDto)
+        public async Task<ActionResult<ApiResponse>> CreateMenuItem([FromForm] MenuItemCreateDto menuItemCreateDto)
         {
             try
             {
                 if (ModelState.IsValid)
                 {
+                    if(menuItemCreateDto.File == null || menuItemCreateDto.File.Length == 0)
+                    {
+                        _response.StatusCode = HttpStatusCode.BadRequest;
+                        _response.IsSuccess = false;
+                        return BadRequest();
+                    }
+                    string fileName = $"{Guid.NewGuid()}{Path.GetExtension(menuItemCreateDto.File.FileName)}";
+                    string imagePath = Path.Combine(_webHostEnvironment.WebRootPath, @"images\MenuItem");
+                    using var fileStream = new FileStream(Path.Combine(imagePath, fileName), FileMode.Create);
+                    menuItemCreateDto.File.CopyTo(fileStream);
+                    menuItemCreateDto.ImageUrl = @"images\MenuItem" + fileName;
                     MenuItem menuItemCreate = new()
                     {
                         Name = menuItemCreateDto.Name,
@@ -60,7 +76,7 @@ namespace BootcampAPI.Controllers
                         Category = menuItemCreateDto.Category,
                         SpecialTag = menuItemCreateDto.SpecialTag,
                         Description = menuItemCreateDto.Description,
-                        Image = menuItemCreateDto.Image,
+                        Image = await _localService.UploadBlob(fileName, menuItemCreateDto.File)
                     };
                     _db.MenuItems.Add(menuItemCreate);
                     _db.SaveChanges();
@@ -96,11 +112,15 @@ namespace BootcampAPI.Controllers
                     }
                     menuItem.Name = menuItemUpdateDto.Name;
                     menuItem.Description = menuItemUpdateDto.Description;
-                    menuItem.Image = menuItemUpdateDto.Image;
                     menuItem.Price = menuItemUpdateDto.Price;
                     menuItem.Category = menuItemUpdateDto.Category;
                     menuItem.SpecialTag = menuItemUpdateDto.SpecialTag;
-
+                    if(menuItemUpdateDto.File != null & menuItemUpdateDto.File.Length > 0)
+                    {
+                        string fileName = $"{Guid.NewGuid()}{Path.GetExtension(menuItemUpdateDto.File.FileName)}";
+                        await _localService.DeleteBlob(menuItem.Image.Split("/").Last());
+                        menuItem.Image = await _localService.UploadBlob(fileName, menuItemUpdateDto.File);
+                    }
                     _db.MenuItems.Update(menuItem);
                     _db.SaveChanges();
                     _response.Result = menuItemUpdateDto;
@@ -135,6 +155,9 @@ namespace BootcampAPI.Controllers
                     _response.IsSuccess = false;
                     return BadRequest();
                 }
+                await _localService.DeleteBlob(item.Image.Split("/").Last());
+                int miliseconds = 2000;
+                Thread.Sleep(miliseconds);
                 _db.MenuItems.Remove(item);
                 _db.SaveChanges();
                 _response.StatusCode = HttpStatusCode.NoContent;

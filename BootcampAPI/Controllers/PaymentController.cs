@@ -35,7 +35,7 @@ namespace BootcampAPI.Controllers
             }
 
             #region Create Payment Intent
-            StripeConfiguration.ApiKey = _configuration["StripeSettings:SecretKey"];
+            StripeConfiguration.ApiKey = _configuration["StripeSettings:SecretKeyStripe"];
             shoppingCart.CartTotal = shoppingCart.CartItems.Sum(u => u.Quantity * u.MenuItem.Price);
             PaymentIntentCreateOptions options = new()
             {

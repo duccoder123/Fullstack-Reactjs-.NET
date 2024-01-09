@@ -13,7 +13,7 @@ namespace BootcampAPI.Models
         public string ClientSecret { get; set; }
        
         [NotMapped]
-        public double CartTotal { get; set; }   
+        public double CartTotal { get; set; }  
     }
    
 }
