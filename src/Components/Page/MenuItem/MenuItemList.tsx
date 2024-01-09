@@ -5,6 +5,7 @@ import MenuItemCard from "./MenuItemCard";
 import { useGetMenuItemsQuery } from "../../../apis/menuItemApi";
 import { useDispatch } from "react-redux";
 import { setMenuItem } from "../../../Storage/Redux/menuItemSlice";
+import { MainLoader } from "../Common";
 function MenuItemList() {
   // const [menuItems, setMenuItems] = useState<menuItemModel[]>([]);
   const dispatch = useDispatch();
@@ -16,7 +17,7 @@ function MenuItemList() {
     }
   }, [isLoading]);
   if (isLoading) {
-    return <p>Loading...</p>;
+    return <MainLoader />;
   }
 
   return (

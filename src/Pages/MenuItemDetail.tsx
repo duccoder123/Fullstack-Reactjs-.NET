@@ -4,6 +4,10 @@ import { useGetMenuItemByIdQuery } from "../apis/menuItemApi";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useUpdateShoppingCartMutation } from "../apis/shoppingCartApi";
+import { MainLoader } from "../Components/Page/Common/index";
+import { RootState } from "../Storage/Redux/store";
+import { useSelector } from "react-redux";
+import { userModel } from "../Interfaces";
 // USER ID - a2283b26-1086-4ec6-b72e-7ba985f50494
 
 function MenuItemDetail() {
@@ -13,7 +17,9 @@ function MenuItemDetail() {
   const [quantity, setQuantity] = useState(1);
   const [isAddingToCart, setIsAddingToCart] = useState<boolean>(false);
   const [updateShoppingCart] = useUpdateShoppingCartMutation();
-
+  const userData: userModel = useSelector(
+    (state: RootState) => state.userAuthStore
+  );
   const handleQuantity = (counter: number) => {
     let newQuantity = quantity + counter;
     if (newQuantity === 0) {
@@ -21,6 +27,20 @@ function MenuItemDetail() {
     }
     setQuantity(newQuantity);
     return;
+  };
+
+  const handleAddToCart = async (menuItemId: number) => {
+    if (!userData.id) {
+      navigate("/login");
+      return;
+    }
+    setIsAddingToCart(true);
+    const response = await updateShoppingCart({
+      menuItemId: menuItemId,
+      updateQuantityBy: quantity,
+      userId: userData.id,
+    });
+    setIsAddingToCart(false);
   };
   return (
     <div className="container pt-4 pt-md-5">
@@ -70,9 +90,18 @@ function MenuItemDetail() {
             </span>
             <div className="row pt-4">
               <div className="col-5">
-                <button className="btn btn-success form-control">
-                  Add to Cart
-                </button>
+                {isAddingToCart ? (
+                  <button disabled className="btn btn-success form-control">
+                    <MainLoader />
+                  </button>
+                ) : (
+                  <button
+                    className="btn btn-success form-control"
+                    onClick={() => handleAddToCart(data.result?.id)}
+                  >
+                    Add to Cart
+                  </button>
+                )}
               </div>
 
               <div className="col-5 ">
@@ -99,7 +128,7 @@ function MenuItemDetail() {
           className="d-flex justify-content-center"
           style={{ width: "100%" }}
         >
-          <div>Loading...</div>
+          <MainLoader />
         </div>
       )}
     </div>

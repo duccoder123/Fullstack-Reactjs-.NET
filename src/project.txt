@@ -1,0 +1,4 @@
+api :
+    - mutation / quẻy: dùng để xử lý các truy dữ liệu từ phía backend.
+    - mutation: dùng để cập nhật dữ liệu ( put, patch, delete, post).
+    - query: dùng để lấy dữ liệu từ phía server (get).
