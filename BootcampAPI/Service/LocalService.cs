@@ -5,7 +5,7 @@ namespace BootcampAPI.Service
     public class LocalService : ILocalService
     {
         private readonly string _uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "Uploads");
-    
+
 
         public async Task<bool> DeleteBlob(string filename)
         {
@@ -13,9 +13,9 @@ namespace BootcampAPI.Service
 
             try
             {
-                if ( File.Exists(filePath))
+                if (File.Exists(filePath))
                 {
-                     File.Delete(filePath);
+                    File.Delete(filePath);
                     return true; // File deleted successfully
                 }
                 else
@@ -25,11 +25,11 @@ namespace BootcampAPI.Service
             }
             catch (Exception ex)
             {
-                throw; 
+                throw;
             }
         }
 
-      
+
 
         public async Task<string> UploadBlob(string filename, IFormFile file)
         {

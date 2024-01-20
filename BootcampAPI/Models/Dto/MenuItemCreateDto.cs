@@ -12,7 +12,7 @@ namespace BootcampAPI.Models.Dto
         [Range(1, int.MaxValue)]
         public double Price { get; set; }
         [Required]
-        public IFormFile File { get; set; }
-        public string ImageUrl { get; set; }    
+        public IFormFile File { get; set; } 
+   
     }
 }

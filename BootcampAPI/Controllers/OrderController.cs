@@ -2,9 +2,11 @@
 using BootcampAPI.Models;
 using BootcampAPI.Models.Dto;
 using BootcampAPI.Utilities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace BootcampAPI.Controllers
 {
@@ -20,21 +22,44 @@ namespace BootcampAPI.Controllers
             _response = new();
         }
         [HttpGet]
-        public async Task<ActionResult<ApiResponse>> GetOrders(string? userId)
+        public async Task<ActionResult<ApiResponse>> GetOrders(string? userId,
+            string searchString, string status, int pageNumber =1 , int pageSize =5)
         {
             try
             {
-                var orderHeader = _db.OrderHeaders.Include(u => u.OrderDetails).
+                IEnumerable<OrderHeader> orderHeader =
+                    _db.OrderHeaders.Include(u => u.OrderDetails).
                     ThenInclude(u => u.MenuItem).
                     OrderByDescending(u => u.OrderHeaderId);
+
+
                 if (!string.IsNullOrEmpty(userId))
                 {
                     _response.Result = orderHeader.Where(u => u.ApplicationUserId == userId);
                 }
-                else
+
+                if (!string.IsNullOrEmpty(searchString))
+                    {
+                    orderHeader = orderHeader.Where(u =>
+                    u.PickupPhoneNumber.ToLower().Contains(searchString) ||
+                    u.PickupEmail.ToLower().Contains(searchString) ||
+                    u.PickupName.ToLower().Contains(searchString)
+                    );
+                     }
+                if (!string.IsNullOrEmpty(status))
                 {
-                    _response.Result = orderHeader;
+                    orderHeader = orderHeader.Where(u => u.Status.ToLower() == status.ToLower());
                 }
+                Pagination pagination = new Pagination()
+                {
+                    CurrentPage = pageNumber,
+                    PageSize = pageSize,
+                    TotalRecords = orderHeader.Count(),
+                };
+                Response.Headers.Add("X-Pagination", JsonSerializer.Serialize(pagination));
+                _response.Result = orderHeader.Skip((pageNumber-1) *pageSize).Take(pageSize);
+                _response.StatusCode = System.Net.HttpStatusCode.OK;
+                
                 return Ok(_response);
             }
             catch (Exception ex)
